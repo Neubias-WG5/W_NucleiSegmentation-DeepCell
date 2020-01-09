@@ -1,2 +1,2 @@
-# W_Template
-Workflow template repository
+# W_NucleiSegmentation-DeepCell
+BIAFLOWS nuclei segmentation workflow using DeepCell.

@@ -4,7 +4,6 @@ from cytomine.models import Job
 from neubiaswg5 import CLASS_OBJSEG
 from neubiaswg5.helpers import NeubiasJob, prepare_data, upload_data, upload_metrics
 
-
 def main(argv):
     base_path = "{}".format(os.getenv("HOME")) # Mandatory for Singularity
     problem_cls = CLASS_OBJSEG
@@ -17,6 +16,8 @@ def main(argv):
 
         # 2. Run image analysis workflow
         nj.job.update(progress=25, statusComment="Launching workflow...")
+        shArgs = ["python", "/app/deepcell_script.py", in_path, tmp_path]
+        return_code = call(" ".join(shArgs), shell=True, cwd="/root/DeepCell/keras_version")
 
         # 3. Upload data to BIAFLOWS
         upload_data(problem_cls, nj, in_imgs, out_path, **nj.flags, monitor_params={
