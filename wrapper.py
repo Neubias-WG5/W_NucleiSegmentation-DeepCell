@@ -1,5 +1,6 @@
 import sys
 import os
+from subprocess import call
 from cytomine.models import Job
 from neubiaswg5 import CLASS_OBJSEG
 from neubiaswg5.helpers import NeubiasJob, prepare_data, upload_data, upload_metrics
@@ -15,9 +16,10 @@ def main(argv):
         in_imgs, gt_imgs, in_path, gt_path, out_path, tmp_path = prepare_data(problem_cls, nj, is_2d=True, **nj.flags)
 
         # 2. Run image analysis workflow
+        sys.exit(0)
         nj.job.update(progress=25, statusComment="Launching workflow...")
-        shArgs = ["python", "/app/deepcell_script.py", in_path, tmp_path]
-        return_code = call(" ".join(shArgs), shell=True, cwd="/root/DeepCell/keras_version")
+        shArgs = ["python", "/app/deepcell_script.py", in_path, tmp_path, out_path, nj.nuclei_min_size, nj.boundary_weight]
+        return_code = call(" ".join(shArgs), shell=True, cwd="/app/DeepCell/keras_version")
 
         # 3. Upload data to BIAFLOWS
         upload_data(problem_cls, nj, in_imgs, out_path, **nj.flags, monitor_params={
