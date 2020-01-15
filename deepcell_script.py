@@ -2,9 +2,15 @@ import sys
 import os
 import shutil
 import skimage.io
+import skimage.morphology
+import numpy as np
 from cnn_functions import run_models_on_directory
 from model_zoo import sparse_bn_feature_net_61x61 as nuclear_fn
 
+"""
+The code in this script is mostly copied and restructured
+from jccaicedo/deepcell
+"""
 
 def prepare_data(in_path, tmp_path):
     image_list = os.listdir(in_path)
@@ -39,6 +45,39 @@ def predict(in_path, out_path):
                                                       win_y = win_nuclear,
                                                       split = False)
 
+def postprocess(tmp_path, out_path, min_size, boundary_weight):
+    predictions = "feature_2_frame_0.tif feature_1_frame_0.tif feature_0_frame_0.tif".split()
+    image_list = os.listdir(tmp_path)
+    for iname in image_list:
+        nuclear_location = os.path.join(tmp_path, iname)
+        probmap = to_rgb(predictions, nuclear_location)
+        pred = probmap_to_pred(probmap, boundary_weight)
+        labels = pred_to_label(pred, min_size).astype(np.uint16)
+        skimage.io.imsave(os.path.join(out_path,iname+'.tif'), labels)
+
+def to_rgb(names, nuclear_location):
+    pred = []
+    for im in names:
+        img = skimage.io.imread(nuclear_location + "/" + im)
+        pred.append(img.reshape(img.shape + (1,)))
+    pred = np.concatenate(pred, -1)
+    return pred
+
+def probmap_to_pred(probmap, boundary_boost_factor=1):
+    # we need to boost the boundary class to make it more visible
+    # this shrinks the cells a little bit but avoids undersegmentation
+    pred = np.argmax(probmap * [1, 1, boundary_boost_factor], -1)
+    return pred
+
+def pred_to_label(pred, cell_min_size, cell_label=1):
+    cell = (pred == cell_label)
+    # fix cells
+    cell = skimage.morphology.remove_small_holes(cell, min_size=cell_min_size)
+    cell = skimage.morphology.remove_small_objects(cell, min_size=cell_min_size)
+    # label cells only
+    [label, num] = skimage.morphology.label(cell, return_num=True)
+    return label
+
 def main():
     in_path = sys.argv[1]
     out_path = sys.argv[2]
@@ -47,6 +86,11 @@ def main():
     boundary_weight = float(sys.argv[5])
     prepare_data(in_path, tmp_path)
     predict(tmp_path, out_path)
+    # Move output from out_path to tmp_path
+    outdirs = os.listdir(out_path)
+    for d in outdirs:
+        shutil.move(os.join(out_path,d), tmp_path)
+    postprocess(tmp_path, out_path, min_size, boundary_weight)
 
 if __name__ == "__main__":
     main()
