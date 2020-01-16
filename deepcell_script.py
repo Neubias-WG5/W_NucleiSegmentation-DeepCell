@@ -80,16 +80,12 @@ def pred_to_label(pred, cell_min_size, cell_label=1):
 
 def main():
     in_path = sys.argv[1]
-    out_path = sys.argv[2]
-    tmp_path = sys.argv[3]
+    tmp_path = sys.argv[2]
+    out_path = sys.argv[3]
     min_size = int(sys.argv[4])
     boundary_weight = float(sys.argv[5])
     prepare_data(in_path, tmp_path)
     predict(tmp_path, out_path)
-    # Move output from out_path to tmp_path
-    outdirs = os.listdir(out_path)
-    for d in outdirs:
-        shutil.move(os.join(out_path,d), tmp_path)
     postprocess(tmp_path, out_path, min_size, boundary_weight)
 
 if __name__ == "__main__":

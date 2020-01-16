@@ -17,7 +17,7 @@ def main(argv):
 
         # 2. Run image analysis workflow
         nj.job.update(progress=25, statusComment="Launching workflow...")
-        shArgs = ["python", "/app/deepcell_script.py", in_path, tmp_path, out_path, nj.parameters.nuclei_min_size, nj.parameters.boundary_weight]
+        shArgs = ["python", "/app/deepcell_script.py", in_path, tmp_path, out_path, str(nj.parameters.nuclei_min_size), str(nj.parameters.boundary_weight)]
         return_code = call(" ".join(shArgs), shell=True, cwd="/app/DeepCell/keras_version")
 
         # 3. Upload data to BIAFLOWS
