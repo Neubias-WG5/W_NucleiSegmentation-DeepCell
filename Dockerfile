@@ -38,7 +38,7 @@ RUN add-apt-repository -y ppa:deadsnakes/ppa && \
 
 RUN cd /tmp && \
     wget https://bootstrap.pypa.io/get-pip.py && \
-    python3.6 get-pip.py
+    python3.6 get-pip.py pip==19.3.1 setuptools==45.1.0 wheel==0.33.6
 
 RUN pip3 install requests \
     requests-toolbelt \
