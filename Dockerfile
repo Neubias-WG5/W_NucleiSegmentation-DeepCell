@@ -3,7 +3,7 @@ FROM nvidia/cuda:8.0-cudnn5-devel
 
 ENV HOME /root
 ENV PATH /usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin:/usr/local/nvidia/bin:/usr/local/cuda/bin
-ENV NUMBA_CACHE_DIR /root
+RUN mkdir /tmp/numba_cache && chmod 777 /tmp/numba_cache && NUMBA_CACHE_DIR=/tmp/numba_cache
 
 RUN apt-get -y update && apt-get install -y git curl g++ make build-essential libssl-dev zlib1g-dev libbz2-dev libreadline-dev libsqlite3-dev python-pip wget python-tk
 
