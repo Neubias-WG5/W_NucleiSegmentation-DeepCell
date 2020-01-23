@@ -12,16 +12,19 @@ The code in this script is mostly copied and restructured
 from jccaicedo/deepcell
 """
 
-def prepare_data(in_path, tmp_path):
+def prepare_data(in_path, tmp_path, win_size = 30):
+    win_size = int(win_size)
     image_list = os.listdir(in_path)
     for im_name in image_list:
         img = skimage.io.imread(os.path.join(in_path, im_name))
+        limg_shape = list(img.shape)
+        for i in range(2): limg_shape[i] = limg_shape[i] + 2*win_size
+        limg = np.zeros(limg_shape, dtype=img.dtype)
         outpath = os.path.join(tmp_path, im_name.split('.')[0])
         os.mkdir(outpath)
-        skimage.io.imsave(os.path.join(outpath, "nuclear.png"), img)
+        skimage.io.imsave(os.path.join(outpath, "nuclear.png"), limg)
 
-def predict(in_path, out_path):
-    win_nuclear = 30
+def predict(in_path, out_path, win_size = 30):
     nuclear_channel_names = ['nuclear']
     trained_network_dir = "/app/DeepCell/trained_networks/Nuclear"
     prefix = "2016-07-12_nuclei_all_61x61_bn_feature_net_61x61_"
@@ -41,25 +44,30 @@ def predict(in_path, out_path):
                                                       list_of_weights = list_of_weights,
                                                       image_size_x = im.shape[1],
                                                       image_size_y = im.shape[0],
-                                                      win_x = win_nuclear,
-                                                      win_y = win_nuclear,
+                                                      win_x = win_size,
+                                                      win_y = win_size,
                                                       split = False)
 
-def postprocess(tmp_path, out_path, min_size, boundary_weight):
+def postprocess(tmp_path, out_path, min_size, boundary_weight, win_size = 30):
     predictions = "feature_2_frame_0.tif feature_1_frame_0.tif feature_0_frame_0.tif".split()
     image_list = os.listdir(tmp_path)
     for iname in image_list:
         nuclear_location = os.path.join(tmp_path, iname)
-        probmap = to_rgb(predictions, nuclear_location)
+        probmap = to_rgb(predictions, nuclear_location, win_size)
         pred = probmap_to_pred(probmap, boundary_weight)
         labels = pred_to_label(pred, min_size).astype(np.uint16)
         skimage.io.imsave(os.path.join(out_path,iname+'.tif'), labels)
 
-def to_rgb(names, nuclear_location):
+def to_rgb(names, nuclear_location, win_size = 30):
+    win_size = int(win_size)
     pred = []
     for im in names:
         img = skimage.io.imread(nuclear_location + "/" + im)
-        pred.append(img.reshape(img.shape + (1,)))
+        if len(img.shape) == 2:
+            cimg = img[win_size:img.shape[0]-win_size, win_size:img.shape[1]-win_size]
+        else:
+            cimg = img[win_size:img.shape[0]-win_size, win_size:img.shape[1]-win_size, :]
+        pred.append(cimg.reshape(cimg.shape + (1,)))
     pred = np.concatenate(pred, -1)
     return pred
 
@@ -84,9 +92,10 @@ def main():
     out_path = sys.argv[3]
     min_size = int(sys.argv[4])
     boundary_weight = float(sys.argv[5])
-    prepare_data(in_path, tmp_path)
-    predict(tmp_path, out_path)
-    postprocess(tmp_path, out_path, min_size, boundary_weight)
+    win_size = 30
+    prepare_data(in_path, tmp_path, win_size)
+    predict(tmp_path, out_path, win_size)
+    postprocess(tmp_path, out_path, min_size, boundary_weight, win_size)
 
 if __name__ == "__main__":
     main()
