@@ -17,13 +17,7 @@ def prepare_data(in_path, tmp_path, win_size = 30):
     image_list = os.listdir(in_path)
     for im_name in image_list:
         img = skimage.io.imread(os.path.join(in_path, im_name))
-        limg_shape = list(img.shape)
-        for i in range(2): limg_shape[i] = limg_shape[i] + 2*win_size
-        limg = np.zeros(limg_shape, dtype=img.dtype)
-        if len(img.shape) == 2:
-            limg[win_size:limg.shape[0]-win_size, win_size:limg.shape[1]-win_size] = img
-        else:
-            limg[win_size:limg.shape[0]-win_size, win_size:limg.shape[1]-win_size, :] = img
+        limg = np.pad(img, (win_size,win_size), mode='symmetric')
         outpath = os.path.join(tmp_path, im_name.split('.')[0])
         os.mkdir(outpath)
         skimage.io.imsave(os.path.join(outpath, "nuclear.png"), limg)
