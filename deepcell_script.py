@@ -1,8 +1,11 @@
 import sys
 import os
 import shutil
+from scipy import ndimage
 import skimage.io
 import skimage.morphology
+import skimage.filters
+import skimage.feature
 import numpy as np
 from cnn_functions import run_models_on_directory
 from model_zoo import sparse_bn_feature_net_61x61 as nuclear_fn
@@ -17,7 +20,12 @@ def prepare_data(in_path, tmp_path, win_size = 30):
     image_list = os.listdir(in_path)
     for im_name in image_list:
         img = skimage.io.imread(os.path.join(in_path, im_name))
-        limg = np.pad(img, (win_size,win_size), mode='symmetric')
+        if len(img.shape) > 2 and img.shape[2] > 1:
+            limg = np.zeros((img.shape[0]+win_size*2,img.shape[1]+win_size*2,img.shape[2]), dtype=img.dtype)
+            for i in range(img.shape[2]):
+                limg[:,:,i] = np.pad(img[:,:,i], (win_size,win_size), mode='symmetric')
+        else:
+            limg = np.pad(img, (win_size,win_size), mode='symmetric')
         outpath = os.path.join(tmp_path, im_name.split('.')[0])
         os.mkdir(outpath)
         skimage.io.imsave(os.path.join(outpath, "nuclear.png"), limg)
@@ -53,7 +61,7 @@ def postprocess(tmp_path, out_path, min_size, boundary_weight, win_size = 30):
         nuclear_location = os.path.join(tmp_path, iname)
         probmap = to_rgb(predictions, nuclear_location, win_size)
         pred = probmap_to_pred(probmap, boundary_weight)
-        labels = pred_to_label(pred, min_size).astype(np.uint16)
+        labels = pred_to_label(pred, min_size)
         skimage.io.imsave(os.path.join(out_path,iname+'.tif'), labels)
 
 def to_rgb(names, nuclear_location, win_size = 30):
@@ -76,13 +84,18 @@ def probmap_to_pred(probmap, boundary_boost_factor=1):
     return pred
 
 def pred_to_label(pred, cell_min_size, cell_label=1):
-    cell = (pred == cell_label)
+    pred = (pred == cell_label)
     # fix cells
-    cell = skimage.morphology.remove_small_holes(cell, min_size=cell_min_size)
-    cell = skimage.morphology.remove_small_objects(cell, min_size=cell_min_size)
-    # label cells only
-    [label, num] = skimage.morphology.label(cell, return_num=True)
-    return label
+    pred = skimage.morphology.remove_small_holes(pred, area_threshold=cell_min_size)
+    distance = ndimage.distance_transform_edt(pred)
+    distance = skimage.filters.gaussian(distance, sigma=3)
+    lmax = skimage.feature.peak_local_max(distance, indices=False, footprint=np.ones((3,3)), labels=pred)
+    markers = skimage.morphology.label(lmax)
+    labels = skimage.morphology.watershed(-distance, markers, mask=pred)
+    labels = labels.astype(np.uint16)
+    labels = skimage.morphology.remove_small_objects(labels, min_size=min_size)
+
+    return labels
 
 def main():
     in_path = sys.argv[1]
