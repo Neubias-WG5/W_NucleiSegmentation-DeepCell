@@ -93,7 +93,7 @@ def pred_to_label(pred, cell_min_size, cell_label=1):
     markers = skimage.morphology.label(lmax)
     labels = skimage.morphology.watershed(-distance, markers, mask=pred)
     labels = labels.astype(np.uint16)
-    labels = skimage.morphology.remove_small_objects(labels, min_size=min_size)
+    labels = skimage.morphology.remove_small_objects(labels, min_size=cell_min_size)
 
     return labels
 
