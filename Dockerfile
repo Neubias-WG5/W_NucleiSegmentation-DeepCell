@@ -85,4 +85,4 @@ ENV PYTHONPATH "$PYTHONPATH:/app/DeepCell/keras_version"
 ADD wrapper.py /app/wrapper.py
 ADD deepcell_script.py /app/deepcell_script.py
 
-ENTRYPOINT ["python3.6", "/app/wrapper.py"]
+ENTRYPOINT ["python3.7", "/app/wrapper.py"]
